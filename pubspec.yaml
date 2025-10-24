@@ -1,0 +1,52 @@
+﻿name: pedeja_clean
+description: PedeJá - App de delivery limpo e otimizado
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # HTTP & API
+  http: ^1.4.0
+  
+  # State Management
+  provider: ^6.1.0
+  
+  # Navegação
+  go_router: ^16.1.0
+  
+  # Formatação
+  intl: ^0.20.0
+  
+  # UI Components
+  google_fonts: ^6.3.0
+  smooth_page_indicator: ^1.2.0
+  
+  # Storage
+  shared_preferences: ^2.5.0
+  path_provider: ^2.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/fonts/
+
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
