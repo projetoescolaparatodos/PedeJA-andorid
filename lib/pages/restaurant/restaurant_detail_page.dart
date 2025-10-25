@@ -87,8 +87,6 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
 
   Widget _buildSliverAppBar() {
     final imageUrl = widget.restaurant.displayImage;
-    final showStatus = widget.restaurant.apiIsOpen != null;
-    final isOpen = widget.restaurant.isOpen == true;
 
     return SliverAppBar(
       expandedHeight: 300,

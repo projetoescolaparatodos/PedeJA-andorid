@@ -2,6 +2,7 @@
 class ProductModel {
   final String id;
   final String restaurantId;
+  final String? restaurantName;
   final String name;
   final String? description;
   final double price;
@@ -15,6 +16,7 @@ class ProductModel {
   ProductModel({
     required this.id,
     required this.restaurantId,
+    this.restaurantName,
     required this.name,
     this.description,
     required this.price,
@@ -31,6 +33,7 @@ class ProductModel {
     return ProductModel(
       id: json['id'] ?? '',
       restaurantId: json['restaurantId'] ?? '',
+      restaurantName: json['restaurantName'],
       name: json['name'] ?? 'Produto sem nome',
       description: json['description'],
       price: (json['price'] as num?)?.toDouble() ?? 0.0,

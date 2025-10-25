@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../models/product_model.dart';
+import '../../state/cart_state.dart';
+import '../cart/cart_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final ProductModel product;
@@ -141,6 +144,50 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       expandedHeight: 300,
       pinned: true,
       backgroundColor: Colors.transparent,
+      actions: [
+        // 🛒 Badge do carrinho
+        Consumer<CartState>(
+          builder: (context, cart, child) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart),
+                  color: Colors.white,
+                  onPressed: () {
+                    CartPage.show(context);
+                  },
+                ),
+                if (cart.itemCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE39110),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        '${cart.itemCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
       flexibleSpace: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -538,15 +585,62 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: Adicionar ao carrinho
+                    final cart = context.read<CartState>();
+
+                    // Coleta adicionais selecionados
+                    final selectedAddonsList = <Map<String, dynamic>>[];
+                    double addonsTotal = 0.0;
+
+                    for (var addon in _addons) {
+                      if (_selectedAddons[addon['name']] == true) {
+                        selectedAddonsList.add({
+                          'id': addon['id'] ?? addon['name'],
+                          'name': addon['name'],
+                          'price': addon['price'],
+                        });
+                        addonsTotal += (addon['price'] as num).toDouble();
+                      }
+                    }
+
+                    // Preço total = preço base + adicionais
+                    final totalPrice = widget.product.price + addonsTotal;
+
+                    // ✅ Adiciona ao carrinho
+                    for (int i = 0; i < _quantity; i++) {
+                      cart.addItem(
+                        productId: widget.product.id,
+                        name: widget.product.name,
+                        price: totalPrice,
+                        imageUrl: widget.product.displayImage,
+                        addons: selectedAddonsList,
+                        restaurantId: widget.product.restaurantId,
+                        restaurantName: widget.product.restaurantName ?? 'Restaurante',
+                      );
+                    }
+
+                    // ✅ Feedback visual
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Adicionado $_quantity ${widget.product.name} ao carrinho',
+                          '✅ ${_quantity}x ${widget.product.name} adicionado ao carrinho!',
                         ),
-                        backgroundColor: const Color(0xFF5D1C17),
+                        backgroundColor: const Color(0xFF74241F),
+                        duration: const Duration(seconds: 2),
+                        action: SnackBarAction(
+                          label: 'Ver Carrinho',
+                          textColor: const Color(0xFFE39110),
+                          onPressed: () {
+                            CartPage.show(context);
+                          },
+                        ),
                       ),
                     );
+
+                    // Reset quantidade
+                    setState(() {
+                      _quantity = 1;
+                      _selectedAddons.clear();
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,

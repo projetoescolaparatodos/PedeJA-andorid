@@ -11,6 +11,8 @@ import '../../widgets/common/restaurant_card.dart';
 import '../../widgets/common/product_card.dart';
 import '../categories/categories_page.dart';
 import '../restaurant/restaurant_detail_page.dart';
+import '../../state/cart_state.dart';
+import '../cart/cart_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -1022,41 +1024,41 @@ class _HomePageState extends State<HomePage> {
               ),
               
               // Cart button com badge
-              badges.Badge(
-                badgeContent: const Text(
-                  '3',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                badgeStyle: badges.BadgeStyle(
-                  badgeColor: const Color(0xFFE39110),
-                  elevation: 3,
-                  padding: const EdgeInsets.all(6),
-                ),
-                position: badges.BadgePosition.topEnd(),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.shopping_cart,
-                      color: Color(0xFFE39110),
+              Consumer<CartState>(
+                builder: (context, cart, child) {
+                  return badges.Badge(
+                    showBadge: cart.itemCount > 0,
+                    badgeContent: Text(
+                      cart.itemCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Carrinho em desenvolvimento'),
-                          backgroundColor: Color(0xFF045146),
+                    badgeStyle: const badges.BadgeStyle(
+                      badgeColor: Color(0xFFE39110),
+                      elevation: 3,
+                      padding: EdgeInsets.all(6),
+                    ),
+                    position: badges.BadgePosition.topEnd(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.shopping_cart,
+                          color: Color(0xFFE39110),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                        onPressed: () {
+                          CartPage.show(context);
+                        },
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
