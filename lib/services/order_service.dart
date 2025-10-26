@@ -1,9 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../models/order_model.dart' as models;
 
-/// Serviço de gerenciamento de pedidos no Firebase
-/// NOTA: Temporariamente desabilitado devido incompatibilidade firebase_auth_web
+/// 📦 Serviço de gerenciamento de pedidos no Firestore
 class OrderService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  /// Criar novo pedido
   Future<String> createOrder({
     required String restaurantId,
     required String restaurantName,
@@ -11,43 +16,166 @@ class OrderService {
     required double total,
     required String deliveryAddress,
   }) async {
-    debugPrint('⚠️ Firebase desabilitado - createOrder simulado');
-    return 'mock-order-id-${DateTime.now().millisecondsSinceEpoch}';
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('Usuário não autenticado');
+      }
+
+      debugPrint('📦 [OrderService] Criando pedido...');
+      debugPrint('   Restaurante: $restaurantName');
+      debugPrint('   Total: R\$ ${total.toStringAsFixed(2)}');
+      debugPrint('   Itens: ${items.length}');
+
+      // Criar documento do pedido
+      final orderData = {
+        'userId': user.uid,
+        'userEmail': user.email,
+        'restaurantId': restaurantId,
+        'restaurantName': restaurantName,
+        'items': items.map((item) => {
+          'productId': item.productId,
+          'name': item.name,
+          'price': item.price,
+          'quantity': item.quantity,
+          'imageUrl': item.imageUrl,
+          'addons': item.addons.map((addon) => {
+            'name': addon.name,
+            'price': addon.price,
+          }).toList(),
+        }).toList(),
+        'total': total,
+        'deliveryAddress': deliveryAddress,
+        'status': 'pending', // pending, confirmed, preparing, delivering, delivered, cancelled
+        'paymentStatus': 'pending', // pending, paid, failed, refunded
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      final docRef = await _firestore.collection('orders').add(orderData);
+      
+      debugPrint('✅ [OrderService] Pedido criado: ${docRef.id}');
+      
+      return docRef.id;
+    } catch (e) {
+      debugPrint('❌ [OrderService] Erro ao criar pedido: $e');
+      rethrow;
+    }
   }
   
+  /// Buscar pedido por ID
   Future<models.Order?> getOrder(String orderId) async {
-    debugPrint('⚠️ Firebase desabilitado - getOrder simulado');
-    return null;
+    try {
+      final doc = await _firestore.collection('orders').doc(orderId).get();
+      
+      if (!doc.exists) {
+        debugPrint('⚠️ [OrderService] Pedido não encontrado: $orderId');
+        return null;
+      }
+      
+      return models.Order.fromFirestore(doc.data()!, doc.id);
+    } catch (e) {
+      debugPrint('❌ [OrderService] Erro ao buscar pedido: $e');
+      return null;
+    }
   }
   
+  /// Monitorar pedido em tempo real
   Stream<models.Order?> watchOrder(String orderId) {
-    debugPrint('⚠️ Firebase desabilitado - watchOrder simulado');
-    return Stream.value(null);
+    return _firestore
+        .collection('orders')
+        .doc(orderId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) return null;
+      return models.Order.fromFirestore(doc.data()!, doc.id);
+    });
   }
   
+  /// Buscar pedidos do usuário
   Future<List<models.Order>> getUserOrders() async {
-    debugPrint('⚠️ Firebase desabilitado - getUserOrders simulado');
-    return [];
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        debugPrint('⚠️ [OrderService] Usuário não autenticado');
+        return [];
+      }
+
+      final snapshot = await _firestore
+          .collection('orders')
+          .where('userId', isEqualTo: user.uid)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => models.Order.fromFirestore(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ [OrderService] Erro ao buscar pedidos: $e');
+      return [];
+    }
   }
   
+  /// Monitorar pedidos do usuário em tempo real
   Stream<List<models.Order>> watchUserOrders() {
-    debugPrint('⚠️ Firebase desabilitado - watchUserOrders simulado');
-    return Stream.value([]);
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: user.uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => models.Order.fromFirestore(doc.data(), doc.id))
+            .toList());
   }
   
+  /// Atualizar status do pedido
   Future<void> updateOrderStatus({
     required String orderId,
     required models.OrderStatus status,
   }) async {
-    debugPrint('⚠️ Firebase desabilitado - updateOrderStatus simulado');
+    try {
+      await _firestore.collection('orders').doc(orderId).update({
+        'status': status.toString().split('.').last,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      debugPrint('✅ [OrderService] Status atualizado: $orderId -> $status');
+    } catch (e) {
+      debugPrint('❌ [OrderService] Erro ao atualizar status: $e');
+      rethrow;
+    }
   }
   
+  /// Atualizar informações de pagamento
   Future<void> updatePaymentInfo({
     required String orderId,
     required models.PaymentInfo payment,
   }) async {
-    debugPrint('⚠️ Firebase desabilitado - updatePaymentInfo simulado');
+    try {
+      await _firestore.collection('orders').doc(orderId).update({
+        'payment': {
+          'id': payment.id,
+          'status': payment.status.toString().split('.').last,
+          'method': payment.method,
+          'amount': payment.amount,
+          'paidAt': payment.paidAt?.toIso8601String(),
+        },
+        'paymentStatus': payment.status.toString().split('.').last,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      debugPrint('✅ [OrderService] Pagamento atualizado: $orderId');
+    } catch (e) {
+      debugPrint('❌ [OrderService] Erro ao atualizar pagamento: $e');
+      rethrow;
+    }
   }
+}
   
   Future<void> cancelOrder(String orderId) async {
     debugPrint('⚠️ Firebase desabilitado - cancelOrder simulado');
