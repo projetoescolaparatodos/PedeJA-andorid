@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/order_model.dart' as models;
 import '../../services/order_service.dart';
 import '../../services/payment_service.dart';
+import '../../state/auth_state.dart';
 import '../../state/cart_state.dart';
 import '../../state/user_state.dart';
 import 'payment_status_page.dart';
@@ -39,30 +40,65 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     try {
       final cartState = context.read<CartState>();
-      final userState = context.read<UserState>();
+      final authState = context.read<AuthState>();
 
       // 1. Validar carrinho
       if (cartState.items.isEmpty) {
         throw Exception('Carrinho vazio');
       }
 
-      // 2. Validar endereço
-      final userData = userState.userData;
+      // 2. Validar dados do usuário (usa AuthState em vez de UserState)
+      final userData = authState.userData;
+      
+      debugPrint('🔍 [CHECKOUT] userData completo: $userData');
+      
       if (userData == null) {
-        throw Exception('Dados do usuário não encontrados');
+        throw Exception('Dados do usuário não encontrados. Faça login novamente.');
       }
 
-      final address = userData['address'];
+      // Tentar obter endereço do campo 'address' ou do array 'addresses'
+      var address = userData['address'];
+      
+      debugPrint('🔍 [CHECKOUT] address type: ${address?.runtimeType}');
+      debugPrint('🔍 [CHECKOUT] address value: $address');
+      
+      // Se address for String (formato antigo), vamos usar como deliveryAddress direto
+      String deliveryAddress;
+      
       if (address == null) {
-        throw Exception('Endereço não cadastrado');
+        // Tentar usar o array de endereços
+        final addresses = userData['addresses'];
+        if (addresses is List && addresses.isNotEmpty) {
+          deliveryAddress = addresses[0].toString();
+          debugPrint('📍 [CHECKOUT] Usando endereço do array addresses: $deliveryAddress');
+        } else {
+          throw Exception('Endereço não cadastrado');
+        }
+      } else if (address is String) {
+        // Usar o endereço como String formatada
+        deliveryAddress = address;
+        debugPrint('📍 [CHECKOUT] Usando endereço como String: $deliveryAddress');
+      } else if (address is Map) {
+        // Formato novo (Map com campos separados)
+        final addressMap = Map<String, dynamic>.from(address);
+        final street = addressMap['street']?.toString() ?? '';
+        final number = addressMap['number']?.toString() ?? '';
+        final complement = addressMap['complement']?.toString() ?? '';
+        final neighborhood = addressMap['neighborhood']?.toString() ?? '';
+        final city = addressMap['city']?.toString() ?? '';
+        final state = addressMap['state']?.toString() ?? '';
+        final zipCode = addressMap['zipCode']?.toString() ?? '';
+        
+        deliveryAddress = '$street, $number'
+            '${complement.isNotEmpty ? ' - $complement' : ''}'
+            ' - $neighborhood, $city - $state'
+            ' CEP: $zipCode';
+        
+        debugPrint('📍 [CHECKOUT] Endereço formatado do Map: $deliveryAddress');
+      } else {
+        debugPrint('❌ [CHECKOUT] Tipo de address desconhecido: ${address.runtimeType}');
+        throw Exception('Formato de endereço inválido');
       }
-
-      // Formatar endereço
-      final complement = address['complement'] as String?;
-      final deliveryAddress = '${address['street']}, ${address['number']}'
-          '${complement != null && complement.isNotEmpty ? ' - $complement' : ''}'
-          ' - ${address['neighborhood']}, ${address['city']} - ${address['state']}'
-          ' CEP: ${address['zipCode']}';
 
       debugPrint('📦 Criando pedido...');
 
@@ -97,8 +133,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
       // 5. Criar pagamento com split
       debugPrint('💳 Criando pagamento com split...');
       
+      // Obter token JWT do AuthState
+      final jwtToken = authState.jwtToken;
+      debugPrint('🔑 [CHECKOUT] Token JWT: ${jwtToken != null ? "Presente" : "Ausente"}');
+      
       final paymentData = await _paymentService.createPaymentWithSplit(
         orderId: orderId,
+        jwtToken: jwtToken, // ← Passar token JWT
         paymentMethod: 'mercadopago',
       );
 
@@ -108,13 +149,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
 
       final payment = paymentData['payment'];
+      
+      debugPrint('🔍 [CHECKOUT] payment completo: $payment');
+      debugPrint('🔍 [CHECKOUT] payment keys: ${payment?.keys}');
+      
       if (payment == null) {
         throw Exception('Dados do pagamento não retornados');
       }
 
-      final checkoutUrl = payment['initPoint'];
+      // Tentar ambas as variações: initPoint e init_point
+      var checkoutUrl = payment['initPoint'] ?? payment['init_point'];
+      
+      debugPrint('🔍 [CHECKOUT] initPoint: ${payment['initPoint']}');
+      debugPrint('🔍 [CHECKOUT] init_point: ${payment['init_point']}');
+      debugPrint('🔍 [CHECKOUT] checkoutUrl escolhido: $checkoutUrl');
+      
       if (checkoutUrl == null || checkoutUrl.isEmpty) {
-        throw Exception('URL do checkout não encontrada');
+        throw Exception('URL do checkout não encontrada. Payment: $payment');
       }
 
       debugPrint('🌐 Abrindo checkout: $checkoutUrl');

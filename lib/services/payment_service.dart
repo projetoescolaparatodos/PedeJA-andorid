@@ -9,6 +9,7 @@ class PaymentService {
   /// Criar pagamento com split (divide valor entre plataforma e restaurante)
   Future<Map<String, dynamic>> createPaymentWithSplit({
     required String orderId,
+    required String? jwtToken, // ← Token JWT como parâmetro
     String paymentMethod = 'mercadopago',
     int installments = 1,
   }) async {
@@ -17,9 +18,23 @@ class PaymentService {
       debugPrint('   Order ID: $orderId');
       debugPrint('   Método: $paymentMethod');
       
+      // 🔑 Validar token JWT
+      if (jwtToken == null || jwtToken.isEmpty) {
+        debugPrint('❌ [PaymentService] Token JWT não encontrado');
+        return {
+          'success': false,
+          'error': 'Token de autenticação não encontrado. Faça login novamente.',
+        };
+      }
+      
+      debugPrint('🔑 [PaymentService] Token JWT recebido');
+      
       final response = await http.post(
         Uri.parse('$apiUrl/api/payment/create'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwtToken', // ← Header de autenticação
+        },
         body: jsonEncode({
           'orderId': orderId,
           'paymentMethod': paymentMethod,
@@ -32,13 +47,28 @@ class PaymentService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
+        debugPrint('🔍 [PaymentService] Response body completo: $data');
+        debugPrint('🔍 [PaymentService] data.keys: ${data.keys}');
+        debugPrint('🔍 [PaymentService] data["initPoint"]: ${data['initPoint']}');
+        debugPrint('🔍 [PaymentService] data["init_point"]: ${data['init_point']}');
+        
         if (data['success'] == true) {
           debugPrint('✅ [PaymentService] Pagamento criado com sucesso');
-          debugPrint('   Init Point: ${data['payment']?['initPoint']}');
+          
+          // O backend retorna initPoint diretamente no data, não dentro de payment
+          final initPoint = data['initPoint'] ?? data['init_point'];
+          final paymentId = data['paymentId'] ?? data['payment_id'];
+          
+          debugPrint('   Init Point: $initPoint');
+          debugPrint('   Payment ID: $paymentId');
           
           return {
             'success': true,
-            'payment': data['payment'],
+            'payment': {
+              'initPoint': initPoint,
+              'init_point': initPoint, // Ambas as variações
+              'id': paymentId,
+            },
           };
         } else {
           final error = data['error'] ?? 'Erro desconhecido';

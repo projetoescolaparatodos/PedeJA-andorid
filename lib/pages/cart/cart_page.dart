@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../state/cart_state.dart';
 import '../../state/user_state.dart';
+import '../../state/auth_state.dart';
 import '../../models/cart_item.dart';
 import '../profile/complete_profile_page.dart';
 import '../checkout/checkout_page.dart';
@@ -411,29 +412,28 @@ class CartPage extends StatelessWidget {
     debugPrint('🛒 [CHECKOUT] Iniciando processo de checkout');
     
     final userState = context.read<UserState>();
+    final authState = context.read<AuthState>();
+
+    // 📡 Atualizar dados do AuthState verificando com a API
+    debugPrint('🔄 [CHECKOUT] Verificando dados atualizados na API...');
+    final isComplete = await authState.checkRegistrationComplete();
+    
+    debugPrint('📋 [CHECKOUT] AuthState.registrationComplete: $isComplete');
+    debugPrint('📋 [CHECKOUT] AuthState.userData: ${authState.userData}');
 
     // 📡 Garantir que dados do usuário estão carregados
-    if (userState.userData == null) {
-      debugPrint('⚠️ [CHECKOUT] userData null - carregando...');
+    if (authState.userData == null) {
+      debugPrint('⚠️ [CHECKOUT] userData null - não autenticado');
       
-      // Mostra loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE39110)),
-          ),
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Você precisa fazer login primeiro'),
+          backgroundColor: Color(0xFF74241F),
         ),
       );
-
-      // Simula login (substitua por autenticação real)
-      await userState.mockLogin();
-
-      if (context.mounted) {
-        Navigator.pop(context); // Fecha loading
-        debugPrint('✅ [CHECKOUT] userData carregado');
-      }
+      return;
     }
 
     if (!context.mounted) {
@@ -441,12 +441,11 @@ class CartPage extends StatelessWidget {
       return;
     }
 
-    // 🔍 VALIDAÇÃO: Verifica se perfil está completo
+    // 🔍 VALIDAÇÃO: Verifica se perfil está completo usando AuthState
     debugPrint('🔍 [CHECKOUT] Validando perfil...');
-    debugPrint('📋 [CHECKOUT] isProfileComplete: ${userState.isProfileComplete}');
-    debugPrint('📋 [CHECKOUT] Campos faltantes: ${userState.missingFields}');
+    debugPrint('📋 [CHECKOUT] registrationComplete: $isComplete');
     
-    if (!userState.isProfileComplete) {
+    if (!isComplete) {
       debugPrint('⚠️ [CHECKOUT] Perfil incompleto - mostrando diálogo');
       
       // ⚠️ NÃO fecha o carrinho ainda - mostra dialog primeiro
@@ -483,31 +482,13 @@ class CartPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Para finalizar seu pedido, precisamos que você complete seu cadastro com:',
+                'Para finalizar seu pedido, precisamos que você complete seu cadastro.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 12),
-              ...userState.missingFields.map((field) => Padding(
-                    padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.circle,
-                            size: 6, color: Color(0xFFE39110)),
-                        const SizedBox(width: 8),
-                        Text(
-                          field,
-                          style: const TextStyle(
-                            color: Color(0xFFE39110),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
               const SizedBox(height: 16),
               const Text(
                 'Deseja completar agora?',

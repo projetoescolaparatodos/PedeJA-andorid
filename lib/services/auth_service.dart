@@ -251,6 +251,12 @@ class AuthService {
         if (data['user'] != null) {
           _userData = data['user'];
           debugPrint('👤 [AuthService] User data atualizado: $_userData');
+          
+          // Log específico do address
+          if (_userData!['address'] != null) {
+            debugPrint('📍 [AuthService] Address type: ${_userData!['address'].runtimeType}');
+            debugPrint('📍 [AuthService] Address value: ${_userData!['address']}');
+          }
         }
         
         debugPrint('📋 [AuthService] Registration complete: $isComplete');
