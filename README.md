@@ -163,15 +163,18 @@ dependencies {
 - Dados armazenados no Firebase (ISO 27001)
 - **Nunca compartilhamos dados sem consentimento**
 
-Link: [Política de Privacidade Completa](https://pedeja.com.br/privacidade)
+### 📋 Documentação Legal
+
+- 📜 **[Termos de Uso](./TERMOS_DE_USO.md)** - Regras de uso do aplicativo
+- 🔒 **[Política de Privacidade](./POLITICA_DE_PRIVACIDADE.md)** - Como tratamos seus dados (LGPD)
 
 ---
 
 ## 📞 Suporte
 
-- **Email:** pedejainc@gmaii.com
-- **Organização:** Zenita
-**telefone** 67998018243
+- **Email:** suporte@pedeja.com.br
+- **Organização:** Projeto Escola Para Todos
+- **GitHub:** [@projetoescolaparatodos](https://github.com/projetoescolaparatodos)
 
 ---
 

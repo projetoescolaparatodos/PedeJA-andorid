@@ -13,8 +13,11 @@ windows/
 pubspec.yaml
 pubspec.lock
 analysis_options.yaml
-*.md
+
+# Permite apenas documentação legal e README
 !README.md
+!TERMOS_DE_USO.md
+!POLITICA_DE_PRIVACIDADE.md
 
 # ===== ARQUIVOS SENSÍVEIS - NUNCA COMMITAR =====
 **/google-services.json
