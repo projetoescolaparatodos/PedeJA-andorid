@@ -14,7 +14,6 @@
 - 🍕 Fazer pedidos de comida e produtos
 - 💳 Realizar pagamentos seguros via Mercado Pago
 - 📍 Acompanhar entregas em tempo real
-- ⭐ Avaliar estabelecimentos e produtos
 
 ---
 
@@ -170,9 +169,9 @@ Link: [Política de Privacidade Completa](https://pedeja.com.br/privacidade)
 
 ## 📞 Suporte
 
-- **Email:** suporte@pedeja.com.br
-- **Organização:** Projeto Escola Para Todos
-- **GitHub:** [@projetoescolaparatodos](https://github.com/projetoescolaparatodos)
+- **Email:** pedejainc@gmaii.com
+- **Organização:** Zenita
+**telefone** 67998018243
 
 ---
 
